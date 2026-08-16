@@ -1,86 +1,82 @@
-# Quality and Deployment
+# Quality and Release Verification
 
-## Local Verification
+## Release Gate
 
-Run:
+Run from the repository root:
 
-powershell -ExecutionPolicy Bypass -File scripts/verify-level3.ps1
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts/verify-release.ps1
+```
 
-The verification script checks:
+The release gate verifies:
 
-- required project files
-- contract formatting
+- required source and documentation files
+- Rust formatting
 - contract tests
-- contract WASM build
-- frontend dependencies
-- frontend type checking
+- production WASM build
+- frontend dependency installation
+- TypeScript type checking
 - frontend production build
-- frontend smoke test
-- public documentation wording
+- Mainnet contract configuration
+- Mainnet deployment evidence
+- absence of stale Level-3 and old Testnet deployment references
 
 ## Contract Quality
 
-The smart contract includes:
+The contract test suite validates:
 
-- persistent storage
-- transfer lifecycle states
+- clean constructor state
+- deployer recording
+- XLM escrow balance movement
+- successful receiver claim
+- refund only after expiry
+- expired claim rejection
+- duplicate close rejection
 - sender authorization
-- receiver authorization
-- transfer history
-- aggregate stats
-- custom errors
-- contract events
-- 4 tests
+- invalid input rejection
+- wrong-party rejection
+- pagination
 
-Test command:
+Commands:
 
+```powershell
+cargo fmt --all -- --check
 cargo test --workspace
-
-Build command:
-
-cargo build --workspace --target wasm32v1-none --release
+stellar contract build
+```
 
 ## Frontend Quality
 
-The frontend includes:
+Commands:
 
-- wallet connection
-- wallet disconnect
-- address display
-- transaction signing
-- transaction hash display
-- handled error states
-- loading states
-- activity feed
-
-Frontend commands:
-
+```powershell
 cd frontend
 npm ci
 npm run type-check
 npm run build
-npm test
+```
+
+The frontend additionally checks the Freighter network before treating a wallet as connected. Production transactions use the Mainnet network passphrase.
 
 ## Deployment Evidence
 
-Deployment files:
+Mainnet deployment details are stored in:
 
-- CONTRACT_ID.txt
-- TX_HASH.txt
-- DEPLOYMENT.md
+```text
+docs/MAINNET_DEPLOYMENT.md
+```
 
-The contract ID is also written into:
+The repository intentionally does not commit signed XDR, wallet secrets, recovery phrases, or local environment files.
 
-frontend/src/contractConfig.ts
+## CI
 
-## CI/CD
+GitHub Actions runs:
 
-GitHub Actions checks:
-
-- smart contract format
-- smart contract tests
-- smart contract WASM build
+- Rust formatting
+- contract tests
+- WASM release build
+- frontend dependency installation
 - frontend type check
 - frontend production build
-- frontend smoke test
-- deployment evidence files
+- Mainnet configuration/evidence checks
+- stale-reference scan

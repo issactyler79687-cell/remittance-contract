@@ -1,306 +1,185 @@
-# Remittance Contract
+# Remit â€” XLM Escrow Remittance on Stellar
 
-Remittance Contract is a Stellar Testnet dApp for creating, claiming, cancelling, and tracking remittance transfers through a Soroban smart contract and a Freighter wallet dashboard.
+Remit is a Mainnet Stellar application for sending XLM through a time-bounded smart-contract escrow.
 
-The project demonstrates a complete Stellar Level 3 dApp flow with smart contract logic, contract tests, deployment evidence, frontend wallet signing, Soroban RPC integration, CI/CD, and local verification scripts.
+A sender locks XLM for a receiver. The receiver can claim the funds before expiry. If the claim window expires first, the sender can refund the locked XLM.
 
-## Problem
+## Mainnet Status
 
-Cross-border remittance flows are often slow, expensive, and difficult to verify.
+- Network: Stellar Mainnet
+- Contract ID: `CAQCTQQM7HAJEGGMUJ3EHZ2XFDOUOBOBRDMFOCC4S3XFXYEOL5VSSLSI`
+- Deploy wallet: `GAHMY42DAKF4XBJMSVOK63LETPAUHAM2D6XQS764JBFL57N25FMYW42N`
+- WASM hash: `65c6aa5c986a146fab07009156b5578e9cc5a6d8df70c6a1d1060fd86bdf2697`
+- Upload transaction: `61320fb0f9f1b095a3a9adc2199d386f8d04cc3e5c1576f6f44f05be69a2300e`
+- Deploy transaction: `bc9a5d63bfe8ca48d2ca69f8197b2c539475107a77c124377452b9400aeaa46d`
 
-Senders and receivers may not have a clear way to check:
+Deployment evidence is documented in [`docs/MAINNET_DEPLOYMENT.md`](docs/MAINNET_DEPLOYMENT.md).
 
-- whether a transfer was created
-- whether a transfer was claimed
-- whether a transfer was cancelled
-- which wallet sent the transfer
-- which wallet should receive the transfer
-- how much value was recorded in the transfer
+## Why Remit
 
-## Solution
+A normal wallet transfer is final as soon as it is sent. Remit adds a simple coordination window:
 
-Remittance Contract stores transfer records on Stellar Testnet.
+1. The sender chooses a receiver, XLM amount, memo, and claim window.
+2. The contract transfers the XLM from the sender into contract escrow.
+3. The receiver claims the escrow before expiry.
+4. If the remittance expires first, only the sender can refund it.
 
-A sender can create a transfer for a receiver wallet.
+This provides an on-chain state that both parties can inspect without giving a third party custody of a private key.
 
-The receiver can claim the transfer.
+## Contract Lifecycle
 
-The sender can cancel a pending transfer.
+`Pending -> Claimed`
 
-The frontend displays wallet state, contract runtime information, transaction hashes, transfer details, and transfer statistics.
+or
 
-## Repository
+`Pending -> Refunded`
 
-GitHub repository:
-
-https://github.com/edenphann99/remittance-contract
-
-## Stellar Testnet Deployment
-
-Network:
-
-Stellar Testnet
-
-Contract ID:
-
-CC4VBT3IZWXDWH56L2MOJZSKHQIHVW7VEB55J33VFOARTESV2OY7VDAS
-
-Contract explorer:
-
-https://stellar.expert/explorer/testnet/contract/CC4VBT3IZWXDWH56L2MOJZSKHQIHVW7VEB55J33VFOARTESV2OY7VDAS
-
-## Successful Contract Interaction
-
-Transaction hash:
-
-ae636d55ab2443c74aec9f21c25d75a2008823ac742a7983090ae28c9372b6ef
-
-Transaction explorer:
-
-https://stellar.expert/explorer/testnet/tx/ae636d55ab2443c74aec9f21c25d75a2008823ac742a7983090ae28c9372b6ef
-
-## Features
-
-- Freighter wallet connect
-- Freighter wallet disconnect
-- connected wallet address display
-- create remittance transfer
-- claim transfer
-- cancel transfer
-- transfer detail lookup
-- sender transfer history
-- receiver transfer history
-- contract stats
-- transaction signing
-- transaction hash display
-- loading states
-- handled error states
-- activity feed
-- responsive dashboard layout
-- CI/CD workflow
-- local verification script
-- deployment automation
+A closed remittance cannot be claimed or refunded again.
 
 ## Smart Contract
 
-Contract location:
+Location:
 
+```text
 contracts/remittance-contract
+```
 
-The contract includes these public functions:
+Public contract functions:
 
-- initialize
-- create_transfer
-- claim_transfer
-- cancel_transfer
-- get_transfer
-- get_counter
-- get_stats
-- get_sender_transfers
-- get_receiver_transfers
+- `__constructor(deployer)`
+- `create_remittance(sender, receiver, amount, memo, expires_at)`
+- `claim_remittance(remittance_id, receiver)`
+- `refund_remittance(remittance_id, sender)`
+- `get_remittance(remittance_id)`
+- `list_remittances(start_id, limit)`
+- `get_stats()`
+- `get_counter()`
+- `get_token()`
+- `get_deployer()`
 
-The contract uses:
+The contract includes:
 
-- custom transfer data struct
-- transfer status enum
-- transfer statistics
-- sender transfer history
-- receiver transfer history
-- persistent storage keys
-- custom errors
+- sender and receiver authorization
+- real XLM balance movement through the Stellar Asset Contract
+- amount and expiry validation
+- duplicate-close protection
+- persistent remittance state
+- aggregate statistics
 - contract events
-- authorization checks
-- contract tests
+- TTL extension
+- checked arithmetic
+- pagination
+- Mainnet/Testnet native-XLM network resolution
+- rejection of unsupported networks
+
+The deployer address is recorded for provenance. It has no privileged fund-transfer method.
+
+## Contract Tests
+
+The contract test suite covers:
+
+- constructor state
+- deployer recording
+- XLM locking on creation
+- receiver claim and balance movement
+- sender refund after expiry
+- expired-claim rejection
+- duplicate claim rejection
+- sender authorization
+- invalid inputs
+- wrong-party rejection
+- pagination
+
+Run:
+
+```powershell
+cargo fmt --all -- --check
+cargo test --workspace
+stellar contract build
+```
 
 ## Frontend
 
-Frontend location:
+Location:
 
+```text
 frontend
+```
 
-Important files:
+The frontend uses React, Vite, Stellar SDK, and Freighter.
 
-- frontend/src/App.tsx
-- frontend/src/App.css
-- frontend/src/contractConfig.ts
-- frontend/src/services/wallet.ts
-- frontend/src/services/contract.ts
-- frontend/src/services/contract.test.ts
+Features:
 
-The frontend contract service uses:
+- Freighter connection
+- Mainnet network guard
+- send XLM into escrow
+- claim pending remittance
+- refund expired remittance
+- remittance lookup
+- contract statistics
+- transaction signing in the user's wallet
+- transaction status polling
+- transaction and contract explorer links
+- loading, success, pending, and error states
 
-- Soroban RPC
-- TransactionBuilder
-- Contract.call
-- prepareTransaction
-- Freighter signTransaction
-- sendTransaction
-- nativeToScVal
-- scValToNative
+The application never asks the user for a secret key or recovery phrase.
 
-Frontend functions map to contract functions:
+### Mainnet configuration
 
-- initializeContract -> initialize
-- createTransfer -> create_transfer
-- claimTransfer -> claim_transfer
-- cancelTransfer -> cancel_transfer
-- getTransfer -> get_transfer
-- getCounter -> get_counter
-- getStats -> get_stats
-- getSenderTransfers -> get_sender_transfers
-- getReceiverTransfers -> get_receiver_transfers
+`frontend/src/contractConfig.ts` is pinned to the deployed Mainnet contract:
 
-## Repository Structure
+```text
+RPC: https://soroban-rpc.mainnet.stellar.gateway.fm
+Contract ID: CAQCTQQM7HAJEGGMUJ3EHZ2XFDOUOBOBRDMFOCC4S3XFXYEOL5VSSLSI
+Network passphrase: Public Global Stellar Network ; September 2015
+```
 
-<pre>
-remittance-contract
-|-- contracts
-|   `-- remittance-contract
-|       |-- Cargo.toml
-|       `-- src
-|           |-- lib.rs
-|           `-- test.rs
-|-- frontend
-|   |-- index.html
-|   |-- package.json
-|   |-- package-lock.json
-|   |-- tsconfig.json
-|   |-- vite.config.ts
-|   `-- src
-|       |-- App.css
-|       |-- App.tsx
-|       |-- contractConfig.ts
-|       |-- main.tsx
-|       |-- vite-env.d.ts
-|       `-- services
-|           |-- contract.test.ts
-|           |-- contract.ts
-|           `-- wallet.ts
-|-- scripts
-|   |-- deploy-and-save.ps1
-|   `-- verify-level3.ps1
-|-- .github
-|   `-- workflows
-|       `-- ci.yml
-|-- docs
-|   |-- ARCHITECTURE.md
-|   `-- QUALITY_AND_VERIFICATION.md
-|-- CONTRACT_ID.txt
-|-- TX_HASH.txt
-|-- DEPLOYMENT.md
-|-- vercel.json
-|-- Cargo.toml
-|-- Cargo.lock
-|-- README.md
-`-- .gitignore
-</pre>
+These are public network configuration values, not wallet secrets.
 
 ## Local Setup
 
-Clone the repository:
-
-<pre>
-git clone https://github.com/edenphann99/remittance-contract.git
-
+```powershell
+git clone https://github.com/issactyler79687-cell/remittance-contract.git
 cd remittance-contract
-</pre>
 
-Install frontend dependencies:
-
-<pre>
 cd frontend
-
-npm install
-</pre>
-
-Run frontend locally:
-
-<pre>
-npm run dev
-</pre>
-
-## Contract Commands
-
-From the repository root:
-
-<pre>
-cargo fmt --all
-
-cargo test --workspace
-
-cargo build --workspace --target wasm32v1-none --release
-</pre>
-
-## Frontend Commands
-
-From the frontend folder:
-
-<pre>
+npm ci
 npm run type-check
-
-npm test
-
 npm run build
-</pre>
+npm run dev
+```
 
-## Full Local Verification
+Freighter must be connected to Mainnet before the app accepts the wallet connection.
 
-From the repository root:
-
-<pre>
-powershell -ExecutionPolicy Bypass -File scripts/verify-level3.ps1
-</pre>
-
-## Deployment
+## Full Release Verification
 
 From the repository root:
 
-<pre>
-powershell -ExecutionPolicy Bypass -File scripts/deploy-and-save.ps1
-</pre>
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts/verify-release.ps1
+```
 
-Deployment evidence is stored in:
+The verification script checks contract formatting/tests/build, frontend type-check/build, Mainnet configuration, deployment evidence, and stale Testnet/Level-3 wording.
 
-- CONTRACT_ID.txt
-- TX_HASH.txt
-- DEPLOYMENT.md
-- frontend/src/contractConfig.ts
+## Architecture
 
-## CI/CD
+See [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
 
-GitHub Actions workflow:
+## Mainnet Deployment
 
-.github/workflows/ci.yml
+See [`docs/MAINNET_DEPLOYMENT.md`](docs/MAINNET_DEPLOYMENT.md).
 
-The CI pipeline runs:
+## Security Notes
 
-- Rust formatting
-- contract tests
-- contract WASM build
-- frontend dependency install
-- frontend type-check
-- frontend tests
-- frontend production build
-- project structure checks
+- The sender authorizes creation and the XLM transfer into escrow.
+- Only the designated receiver can claim a pending remittance.
+- Only the original sender can refund after expiry.
+- No private key is stored in the repository or frontend.
+- Signed XDR files and local `.env` files are ignored by Git.
+- Mainnet uses real XLM. Review every Freighter transaction before signing.
 
-## Current Status
+## Repository
 
-Completed:
-
-- Soroban smart contract
-- contract tests
-- Freighter wallet service
-- frontend contract integration
-- responsive dashboard
-- frontend tests
-- deployment automation
-- deployment evidence
-- verification automation
-- GitHub Actions CI configuration
-- Vercel deployment configuration
-
-## Notes
-
-This repository does not include private keys, secret phrases, dependency folders, local build outputs, or local deploy logs.
-
-Generated folders and local logs are ignored by git.
+```text
+https://github.com/issactyler79687-cell/remittance-contract
+```

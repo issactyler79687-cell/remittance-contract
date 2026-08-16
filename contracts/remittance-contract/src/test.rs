@@ -51,8 +51,7 @@ fn setup<'a>(
 
     token_admin.mint(&sender, &(100 * ONE_XLM));
 
-    let contract_id =
-        env.register(RemittanceContract, (deployer,));
+    let contract_id = env.register(RemittanceContract, (deployer,));
 
     env.as_contract(&contract_id, || {
         env.storage()
@@ -62,14 +61,7 @@ fn setup<'a>(
 
     let client = RemittanceContractClient::new(env, &contract_id);
 
-    (
-        client,
-        token,
-        token_admin,
-        sender,
-        receiver,
-        contract_id,
-    )
+    (client, token, token_admin, sender, receiver, contract_id)
 }
 
 #[test]
@@ -79,11 +71,9 @@ fn constructor_records_deployer() {
 
     let deployer = Address::generate(&env);
 
-    let contract_id =
-        env.register(RemittanceContract, (deployer.clone(),));
+    let contract_id = env.register(RemittanceContract, (deployer.clone(),));
 
-    let client =
-        RemittanceContractClient::new(&env, &contract_id);
+    let client = RemittanceContractClient::new(&env, &contract_id);
 
     assert_eq!(client.get_deployer(), deployer);
 }
@@ -108,8 +98,7 @@ fn constructor_starts_with_clean_state() {
 fn create_remittance_locks_tokens_in_contract() {
     let env = Env::default();
 
-    let (client, token, _, sender, receiver, contract_id) =
-        setup(&env);
+    let (client, token, _, sender, receiver, contract_id) = setup(&env);
 
     let amount = 5 * ONE_XLM;
 
@@ -132,15 +121,9 @@ fn create_remittance_locks_tokens_in_contract() {
     assert_eq!(remittance.amount, amount);
     assert_eq!(remittance.status, RemittanceStatus::Pending);
 
-    assert_eq!(
-        token.balance(&sender),
-        sender_before - amount
-    );
+    assert_eq!(token.balance(&sender), sender_before - amount);
 
-    assert_eq!(
-        token.balance(&contract_id),
-        amount
-    );
+    assert_eq!(token.balance(&contract_id), amount);
 
     assert_eq!(stats.total_remittances, 1);
     assert_eq!(stats.pending_remittances, 1);
@@ -152,8 +135,7 @@ fn create_remittance_locks_tokens_in_contract() {
 fn receiver_can_claim_locked_tokens() {
     let env = Env::default();
 
-    let (client, token, _, sender, receiver, contract_id) =
-        setup(&env);
+    let (client, token, _, sender, receiver, contract_id) = setup(&env);
 
     let amount = 3 * ONE_XLM;
 
@@ -186,8 +168,7 @@ fn receiver_can_claim_locked_tokens() {
 fn sender_can_refund_only_after_expiry() {
     let env = Env::default();
 
-    let (client, token, _, sender, receiver, contract_id) =
-        setup(&env);
+    let (client, token, _, sender, receiver, contract_id) = setup(&env);
 
     let amount = 2 * ONE_XLM;
     let original_balance = token.balance(&sender);
@@ -200,16 +181,9 @@ fn sender_can_refund_only_after_expiry() {
         &(START_TIME + 600),
     );
 
-    assert_eq!(
-        token.balance(&sender),
-        original_balance - amount
-    );
+    assert_eq!(token.balance(&sender), original_balance - amount);
 
-    assert!(
-        client
-            .try_refund_remittance(&id, &sender)
-            .is_err()
-    );
+    assert!(client.try_refund_remittance(&id, &sender).is_err());
 
     set_time(&env, START_TIME + 601);
 
@@ -230,8 +204,7 @@ fn sender_can_refund_only_after_expiry() {
 fn expired_remittance_cannot_be_claimed() {
     let env = Env::default();
 
-    let (client, token, _, sender, receiver, contract_id) =
-        setup(&env);
+    let (client, token, _, sender, receiver, contract_id) = setup(&env);
 
     let amount = ONE_XLM;
 
@@ -245,11 +218,7 @@ fn expired_remittance_cannot_be_claimed() {
 
     set_time(&env, START_TIME + 600);
 
-    assert!(
-        client
-            .try_claim_remittance(&id, &receiver)
-            .is_err()
-    );
+    assert!(client.try_claim_remittance(&id, &receiver).is_err());
 
     assert_eq!(token.balance(&receiver), 0);
     assert_eq!(token.balance(&contract_id), amount);
@@ -259,8 +228,7 @@ fn expired_remittance_cannot_be_claimed() {
 fn closed_remittance_cannot_be_claimed_twice() {
     let env = Env::default();
 
-    let (client, token, _, sender, receiver, _) =
-        setup(&env);
+    let (client, token, _, sender, receiver, _) = setup(&env);
 
     let amount = ONE_XLM;
 
@@ -274,11 +242,7 @@ fn closed_remittance_cannot_be_claimed_twice() {
 
     client.claim_remittance(&id, &receiver);
 
-    assert!(
-        client
-            .try_claim_remittance(&id, &receiver)
-            .is_err()
-    );
+    assert!(client.try_claim_remittance(&id, &receiver).is_err());
 
     assert_eq!(token.balance(&receiver), amount);
 }
@@ -287,64 +251,54 @@ fn closed_remittance_cannot_be_claimed_twice() {
 fn invalid_inputs_are_rejected() {
     let env = Env::default();
 
-    let (client, _, _, sender, receiver, _) =
-        setup(&env);
+    let (client, _, _, sender, receiver, _) = setup(&env);
 
-    assert!(
-        client
-            .try_create_remittance(
-                &sender,
-                &receiver,
-                &0,
-                &String::from_str(&env, "Zero"),
-                &(START_TIME + 3600),
-            )
-            .is_err()
-    );
+    assert!(client
+        .try_create_remittance(
+            &sender,
+            &receiver,
+            &0,
+            &String::from_str(&env, "Zero"),
+            &(START_TIME + 3600),
+        )
+        .is_err());
 
-    assert!(
-        client
-            .try_create_remittance(
-                &sender,
-                &sender,
-                &ONE_XLM,
-                &String::from_str(&env, "Same party"),
-                &(START_TIME + 3600),
-            )
-            .is_err()
-    );
+    assert!(client
+        .try_create_remittance(
+            &sender,
+            &sender,
+            &ONE_XLM,
+            &String::from_str(&env, "Same party"),
+            &(START_TIME + 3600),
+        )
+        .is_err());
 
-    assert!(
-        client
-            .try_create_remittance(
-                &sender,
-                &receiver,
-                &ONE_XLM,
-                &String::from_str(&env, "Too soon"),
-                &(START_TIME + 10),
-            )
-            .is_err()
-    );
+    assert!(client
+        .try_create_remittance(
+            &sender,
+            &receiver,
+            &ONE_XLM,
+            &String::from_str(&env, "Too soon"),
+            &(START_TIME + 10),
+        )
+        .is_err());
 
-    assert!(
-        client
-            .try_create_remittance(
-                &sender,
-                &receiver,
-                &ONE_XLM,
-                &String::from_str(&env, "Too late"),
-                &(START_TIME + (8 * 24 * 60 * 60)),
-            )
-            .is_err()
-    );
+    assert!(client
+        .try_create_remittance(
+            &sender,
+            &receiver,
+            &ONE_XLM,
+            &String::from_str(&env, "Too late"),
+            &(START_TIME + (8 * 24 * 60 * 60)),
+        )
+        .is_err());
 }
 
 #[test]
 fn wrong_party_cannot_close_remittance() {
     let env = Env::default();
 
-    let (client, _, _, sender, receiver, _) =
-        setup(&env);
+    let (client, _, _, sender, receiver, _) = setup(&env);
 
     let stranger = Address::generate(&env);
 
@@ -356,27 +310,18 @@ fn wrong_party_cannot_close_remittance() {
         &(START_TIME + 600),
     );
 
-    assert!(
-        client
-            .try_claim_remittance(&id, &stranger)
-            .is_err()
-    );
+    assert!(client.try_claim_remittance(&id, &stranger).is_err());
 
     set_time(&env, START_TIME + 601);
 
-    assert!(
-        client
-            .try_refund_remittance(&id, &stranger)
-            .is_err()
-    );
+    assert!(client.try_refund_remittance(&id, &stranger).is_err());
 }
 
 #[test]
 fn pagination_returns_expected_records() {
     let env = Env::default();
 
-    let (client, _, _, sender, receiver, _) =
-        setup(&env);
+    let (client, _, _, sender, receiver, _) = setup(&env);
 
     for i in 0..3 {
         client.create_remittance(
@@ -398,17 +343,9 @@ fn pagination_returns_expected_records() {
     assert_eq!(second_page.len(), 1);
     assert_eq!(second_page.get(0).unwrap().id, 3);
 
-    assert!(
-        client
-            .try_list_remittances(&1, &0)
-            .is_err()
-    );
+    assert!(client.try_list_remittances(&1, &0).is_err());
 
-    assert!(
-        client
-            .try_list_remittances(&1, &51)
-            .is_err()
-    );
+    assert!(client.try_list_remittances(&1, &51).is_err());
 }
 
 #[test]
@@ -421,28 +358,23 @@ fn create_requires_sender_authorization() {
     let sender = Address::generate(&env);
     let receiver = Address::generate(&env);
 
-    let sac =
-        env.register_stellar_asset_contract_v2(issuer);
+    let sac = env.register_stellar_asset_contract_v2(issuer);
 
-    let token_address = sac.address();
+    let _token_address = sac.address();
 
     let deployer = Address::generate(&env);
 
-    let contract_id =
-        env.register(RemittanceContract, (deployer,));
+    let contract_id = env.register(RemittanceContract, (deployer,));
 
-    let client =
-        RemittanceContractClient::new(&env, &contract_id);
+    let client = RemittanceContractClient::new(&env, &contract_id);
 
-    assert!(
-        client
-            .try_create_remittance(
-                &sender,
-                &receiver,
-                &ONE_XLM,
-                &String::from_str(&env, "No auth"),
-                &(START_TIME + 3600),
-            )
-            .is_err()
-    );
+    assert!(client
+        .try_create_remittance(
+            &sender,
+            &receiver,
+            &ONE_XLM,
+            &String::from_str(&env, "No auth"),
+            &(START_TIME + 3600),
+        )
+        .is_err());
 }

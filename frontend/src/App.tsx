@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import {
   CONTRACT_CONFIG,
   getContractExplorerUrl,
@@ -44,7 +44,7 @@ function shorten(value: string): string {
 function formatDate(timestamp: string): string {
   const value = Number(timestamp);
 
-  if (!value) return "—";
+  if (!value) return "â€”";
 
   return new Date(value * 1000).toLocaleString();
 }
@@ -66,12 +66,7 @@ function App() {
   const [stats, setStats] =
     useState<RemittanceStats>(emptyStats);
 
-  const contractReady = useMemo(
-    () =>
-      Boolean(CONTRACT_CONFIG.contractId) &&
-      CONTRACT_CONFIG.contractId !== "REPLACE_AFTER_DEPLOY",
-    []
-  );
+  const contractReady = Boolean(CONTRACT_CONFIG.contractId);
 
   const connected = Boolean(walletAddress);
 
@@ -124,7 +119,7 @@ function App() {
 
       setNotice({
         type: "success",
-        text: "Freighter connected."
+        text: "Freighter connected to Mainnet."
       });
 
       if (contractReady) {
@@ -352,7 +347,7 @@ function App() {
               target="_blank"
               rel="noreferrer"
             >
-              View contract ↗
+              View contract â†—
             </a>
           ) : (
             <small>Contract deployment pending</small>
@@ -362,8 +357,8 @@ function App() {
 
       {!contractReady && (
         <div className="notice info">
-          Contract is not deployed yet. The interface is
-          ready for Testnet configuration.
+          Mainnet contract configuration is missing. Set
+          VITE_CONTRACT_ID before using Remit.
         </div>
       )}
 
@@ -377,7 +372,7 @@ function App() {
               target="_blank"
               rel="noreferrer"
             >
-              View transaction ↗
+              View transaction â†—
             </a>
           )}
         </div>
@@ -592,7 +587,7 @@ function App() {
             </div>
           ) : (
             <div className="empty-state">
-              <span>↗</span>
+              <span>â†—</span>
               <p>
                 Enter an ID to view its sender, receiver,
                 amount and status.
@@ -604,7 +599,7 @@ function App() {
 
       <footer>
         <span>
-          Stellar • {CONTRACT_CONFIG.network}
+          Stellar â€¢ {CONTRACT_CONFIG.network}
         </span>
 
         <button

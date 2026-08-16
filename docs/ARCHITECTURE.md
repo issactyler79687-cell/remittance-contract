@@ -1,128 +1,136 @@
-# Remittance Contract Architecture
+# Remit Architecture
 
-remittance-contract is an end-to-end Stellar Testnet dApp for recording transparent remittance commitments through a Soroban smart contract and a Freighter wallet dashboard.
+Remit is a Stellar Mainnet application that uses a Soroban smart contract as a time-bounded XLM escrow between a sender and a receiver.
 
-## Product Problem
+## Product Flow
 
-Cross-border remittance coordination is often handled through private chats, screenshots, or manual notes. This makes it difficult for senders and receivers to verify whether a transfer promise was created, claimed, or cancelled.
+### Create
 
-This dApp stores remittance records on Stellar Testnet so both sides can inspect transfer status through a public contract interaction.
+1. A sender connects Freighter on Mainnet.
+2. The sender enters a receiver, XLM amount, memo, and claim window.
+3. The frontend builds `create_remittance`.
+4. Freighter signs the prepared transaction.
+5. The native XLM Stellar Asset Contract transfers XLM from the sender to the Remit contract.
+6. Remit stores the remittance as `Pending`.
 
-## System Components
+### Claim
 
-### Smart Contract
+1. The designated receiver loads the remittance.
+2. The receiver signs `claim_remittance`.
+3. The contract verifies receiver authorization and that the remittance is still pending and unexpired.
+4. XLM moves from contract escrow to the receiver.
+5. Status becomes `Claimed`.
 
-Location:
+### Refund
 
-contracts/remittance-contract
+1. The sender loads an expired pending remittance.
+2. The sender signs `refund_remittance`.
+3. The contract verifies sender authorization and expiry.
+4. XLM moves from contract escrow back to the sender.
+5. Status becomes `Refunded`.
 
-The contract provides:
-
-- initialize
-- create_transfer
-- claim_transfer
-- cancel_transfer
-- get_transfer
-- get_counter
-- get_stats
-- get_sender_transfers
-- get_receiver_transfers
-
-The contract stores:
-
-- transfer records
-- sender transfer history
-- receiver transfer history
-- aggregate transfer stats
-
-The contract includes:
-
-- custom structs
-- custom errors
-- persistent storage
-- contract events
-- 4 passing tests
-
-### Frontend
+## Smart Contract
 
 Location:
 
-frontend
+```text
+contracts/remittance-contract/src/lib.rs
+```
 
-The frontend is a React and Vite dashboard with:
+Public functions:
 
-- Freighter wallet connection
-- wallet disconnect
-- connected address display
-- contract runtime card
-- create transfer form
-- claim transfer action
-- cancel transfer action
-- transfer lookup
-- transaction monitor
-- activity feed
-- error and loading states
+- `__constructor`
+- `create_remittance`
+- `claim_remittance`
+- `refund_remittance`
+- `get_remittance`
+- `list_remittances`
+- `get_stats`
+- `get_counter`
+- `get_token`
+- `get_deployer`
 
-### Contract Service Layer
+### Authorization
+
+`create_remittance` requires the sender's authorization.
+
+`claim_remittance` requires the receiver's authorization and verifies that the signer is the receiver stored in the remittance.
+
+`refund_remittance` requires the sender's authorization and verifies that the signer is the original sender.
+
+### XLM integration
+
+Production does not accept an arbitrary token address in the constructor.
+
+The contract resolves native XLM from the current Stellar network ID:
+
+- Mainnet -> native XLM SAC `CAS3J7GYLGXMF6TDJBBYYSE3HQ6BBSMLNUQ34T6TZMYMW2EVH34XOWMA`
+- Testnet -> the native Testnet XLM SAC
+- other network -> `UnsupportedNetwork`
+
+The Testnet path remains in the contract so the same WASM logic can be regression-tested without changing production semantics.
+
+### Deployer
+
+The constructor records the deployer address as provenance.
+
+The deployer is not an administrator and receives no privileged claim, refund, or token-transfer capability.
+
+### Storage
+
+Instance storage:
+
+- deployer
+- counter
+- aggregate statistics
+
+Persistent storage:
+
+- remittance records
+
+The contract extends TTL for active instance and remittance entries.
+
+### Events
+
+Lifecycle actions publish contract events so external indexers can follow creation, claim, and refund activity.
+
+## Frontend
 
 Location:
 
-frontend/src/services/contract.ts
+```text
+frontend/src
+```
 
-The frontend contract service handles:
+`App.tsx` handles product state and user actions.
 
-- RPC server setup
-- contract method mapping
-- argument conversion to ScVal
+`services/wallet.ts` handles Freighter access, verifies Mainnet, and signs XDR.
+
+`services/contract.ts` handles:
+
+- RPC connection
+- Soroban contract calls
+- argument encoding
 - read simulation
 - transaction preparation
 - Freighter signing
 - transaction submission
-- transaction status polling
-- transaction hash output
+- status polling
+- result normalization
 
-### Wallet Service Layer
+`contractConfig.ts` pins the frontend to the production Mainnet RPC, passphrase, and deployed contract.
 
-Location:
+## Mainnet Configuration
 
-frontend/src/services/wallet.ts
+- Network: Stellar Mainnet
+- Passphrase: `Public Global Stellar Network ; September 2015`
+- RPC: `https://soroban-rpc.mainnet.stellar.gateway.fm`
+- Contract: `CAQCTQQM7HAJEGGMUJ3EHZ2XFDOUOBOBRDMFOCC4S3XFXYEOL5VSSLSI`
 
-The wallet service handles:
+## Trust Model
 
-- Freighter availability check
-- setAllowed
-- requestAccess
-- getAddress
-- signTransaction
-- wallet error handling
+Remit does not operate a custodial backend.
 
-## Data Flow
+The smart contract temporarily controls XLM that the sender explicitly authorizes into escrow. Contract rules determine whether the receiver can claim or the sender can refund.
 
-1. User connects Freighter.
-2. Frontend retrieves the public address.
-3. User fills a remittance action.
-4. Frontend builds a Soroban contract transaction.
-5. RPC prepares the transaction.
-6. Freighter signs the transaction.
-7. Frontend submits the signed transaction.
-8. Dashboard displays status and transaction hash.
-9. Read actions simulate contract calls through RPC.
-
-## Deployment
-
-The contract is deployed on Stellar Testnet.
-
-Contract ID:
-
-CC4VBT3IZWXDWH56L2MOJZSKHQIHVW7VEB55J33VFOARTESV2OY7VDAS
-
-Sample transaction hash:
-
-ae636d55ab2443c74aec9f21c25d75a2008823ac742a7983090ae28c9372b6ef
-
-The deployment script saves:
-
-- CONTRACT_ID.txt
-- TX_HASH.txt
-- DEPLOYMENT.md
-- frontend/src/contractConfig.ts
+The frontend cannot move a user's XLM without a wallet signature.

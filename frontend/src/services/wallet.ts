@@ -1,4 +1,5 @@
 import * as Freighter from "@stellar/freighter-api";
+import { CONTRACT_CONFIG } from "../contractConfig";
 
 const FREIGHTER = Freighter as any;
 
@@ -37,6 +38,10 @@ function pickError(value: unknown): string {
     return result.error;
   }
 
+  if (typeof result?.error?.message === "string") {
+    return result.error.message;
+  }
+
   if (typeof result?.message === "string") {
     return result.message;
   }
@@ -47,7 +52,10 @@ function pickError(value: unknown): string {
 export async function checkFreighterConnection(): Promise<boolean> {
   try {
     const isConnected = FREIGHTER.isConnected;
-    const response = typeof isConnected === "function" ? await isConnected() : true;
+    const response =
+      typeof isConnected === "function"
+        ? await isConnected()
+        : false;
 
     if (typeof response === "boolean") {
       return response;
@@ -57,10 +65,40 @@ export async function checkFreighterConnection(): Promise<boolean> {
       return response.isConnected;
     }
 
-    return true;
+    return false;
   } catch {
     return false;
   }
+}
+
+async function verifyMainnet(): Promise<string> {
+  const getNetwork = FREIGHTER.getNetwork;
+
+  if (typeof getNetwork !== "function") {
+    return "Unable to verify the Freighter network. Update Freighter and try again.";
+  }
+
+  const response = await getNetwork();
+  const error = pickError(response);
+
+  if (error) {
+    return error;
+  }
+
+  const network = String(response?.network ?? "");
+  const networkPassphrase = String(
+    response?.networkPassphrase ?? ""
+  );
+
+  if (
+    networkPassphrase !== CONTRACT_CONFIG.networkPassphrase
+  ) {
+    const label = network || "another network";
+
+    return `Freighter is connected to ${label}. Switch to Mainnet before using Remit.`;
+  }
+
+  return "";
 }
 
 export async function connectFreighterWallet(): Promise<WalletState> {
@@ -71,7 +109,8 @@ export async function connectFreighterWallet(): Promise<WalletState> {
       return {
         connected: false,
         address: "",
-        error: "Freighter wallet is not available. Please install Freighter and switch to Stellar Testnet."
+        error:
+          "Freighter wallet is not available. Install or unlock Freighter, then try again."
       };
     }
 
@@ -119,7 +158,18 @@ export async function connectFreighterWallet(): Promise<WalletState> {
       return {
         connected: false,
         address: "",
-        error: "Wallet access was approved, but no public address was returned."
+        error:
+          "Wallet access was approved, but no public address was returned."
+      };
+    }
+
+    const networkError = await verifyMainnet();
+
+    if (networkError) {
+      return {
+        connected: false,
+        address: "",
+        error: networkError
       };
     }
 
@@ -132,7 +182,10 @@ export async function connectFreighterWallet(): Promise<WalletState> {
     return {
       connected: false,
       address: "",
-      error: error instanceof Error ? error.message : "Wallet connection failed."
+      error:
+        error instanceof Error
+          ? error.message
+          : "Wallet connection failed."
     };
   }
 }
@@ -160,11 +213,17 @@ export async function getConnectedAddress(): Promise<string> {
   return address;
 }
 
-export async function signWithFreighter(xdr: string, address: string, networkPassphrase: string): Promise<string> {
+export async function signWithFreighter(
+  xdr: string,
+  address: string,
+  networkPassphrase: string
+): Promise<string> {
   const signTransaction = FREIGHTER.signTransaction;
 
   if (typeof signTransaction !== "function") {
-    throw new Error("Freighter signTransaction is not available.");
+    throw new Error(
+      "Freighter signTransaction is not available."
+    );
   }
 
   const response = await signTransaction(xdr, {
@@ -173,6 +232,11 @@ export async function signWithFreighter(xdr: string, address: string, networkPas
   });
 
   const result = response as any;
+  const error = pickError(result);
+
+  if (error) {
+    throw new Error(error);
+  }
 
   if (typeof result === "string") {
     return result;
@@ -186,9 +250,7 @@ export async function signWithFreighter(xdr: string, address: string, networkPas
     return String(result.signedXDR);
   }
 
-  if (result?.error) {
-    throw new Error(String(result.error));
-  }
-
-  throw new Error("Freighter did not return a signed transaction XDR.");
+  throw new Error(
+    "Freighter did not return a signed transaction XDR."
+  );
 }

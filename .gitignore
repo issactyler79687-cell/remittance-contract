@@ -1,39 +1,35 @@
+# Rust / Soroban
 target/
+.stellar/
+contracts/**/test_snapshots/
+
+# Frontend
 node_modules/
 dist/
 .vite/
-.env
-.env.local
-.stellar/
-deploy-output.txt
-deploy-stdout.tmp
-deploy-stderr.tmp
-version-check.txt
-*.bak
-.DS_Store
-contracts/**/test_snapshots/
 frontend/node_modules/
 frontend/dist/
 frontend/.vite/
-server/node_modules/
-server/dist/
-frontend/.env
-frontend/.env.local
 
+# Environment files
+.env
+.env.*
+!.env.example
 frontend/.env
-frontend/.env.local
+frontend/.env.*
+!frontend/.env.example
 
 # Stellar transaction/signing artifacts
 *.xdr
 *.log
 
-# Secrets
-.env
-.env.*
-!.env.example
+# Local deployment/build artifacts
+deploy-output.txt
+deploy-stdout.tmp
+deploy-stderr.tmp
+version-check.txt
+*.bak
 
-# Build/dependencies
-target/
-node_modules/
-frontend/node_modules/
-frontend/dist/
+# OS
+.DS_Store
+Thumbs.db

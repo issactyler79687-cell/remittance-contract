@@ -1,8 +1,8 @@
 #![no_std]
 
 use soroban_sdk::{
-    contract, contracterror, contractevent, contractimpl, contracttype,
-    panic_with_error, token, Address, BytesN, Env, String, Vec,
+    contract, contracterror, contractevent, contractimpl, contracttype, panic_with_error, token,
+    Address, BytesN, Env, String, Vec,
 };
 
 const MAX_MEMO_LENGTH: u32 = 120;
@@ -13,24 +13,18 @@ const TTL_THRESHOLD: u32 = 100_000;
 const TTL_EXTEND_TO: u32 = 500_000;
 const MAX_PAGE_SIZE: u32 = 50;
 
-const MAINNET_XLM_SAC: &str =
-    "CAS3J7GYLGXMF6TDJBBYYSE3HQ6BBSMLNUQ34T6TZMYMW2EVH34XOWMA";
+const MAINNET_XLM_SAC: &str = "CAS3J7GYLGXMF6TDJBBYYSE3HQ6BBSMLNUQ34T6TZMYMW2EVH34XOWMA";
 
-const TESTNET_XLM_SAC: &str =
-    "CDLZFC3SYJYDZT7K67VZ75HPJVIEUVNIXF47ZG2FB2RMQQVU2HHGCYSC";
+const TESTNET_XLM_SAC: &str = "CDLZFC3SYJYDZT7K67VZ75HPJVIEUVNIXF47ZG2FB2RMQQVU2HHGCYSC";
 
 const MAINNET_NETWORK_ID: [u8; 32] = [
-    0x7a, 0xc3, 0x39, 0x97, 0x54, 0x4e, 0x31, 0x75,
-    0xd2, 0x66, 0xbd, 0x02, 0x24, 0x39, 0xb2, 0x2c,
-    0xdb, 0x16, 0x50, 0x8c, 0x01, 0x16, 0x3f, 0x26,
-    0xe5, 0xcb, 0x2a, 0x3e, 0x10, 0x45, 0xa9, 0x79,
+    0x7a, 0xc3, 0x39, 0x97, 0x54, 0x4e, 0x31, 0x75, 0xd2, 0x66, 0xbd, 0x02, 0x24, 0x39, 0xb2, 0x2c,
+    0xdb, 0x16, 0x50, 0x8c, 0x01, 0x16, 0x3f, 0x26, 0xe5, 0xcb, 0x2a, 0x3e, 0x10, 0x45, 0xa9, 0x79,
 ];
 
 const TESTNET_NETWORK_ID: [u8; 32] = [
-    0xce, 0xe0, 0x30, 0x2d, 0x59, 0x84, 0x4d, 0x32,
-    0xbd, 0xca, 0x91, 0x5c, 0x82, 0x03, 0xdd, 0x44,
-    0xb3, 0x3f, 0xbb, 0x7e, 0xdc, 0x19, 0x05, 0x1e,
-    0xa3, 0x7a, 0xbe, 0xdf, 0x28, 0xec, 0xd4, 0x72,
+    0xce, 0xe0, 0x30, 0x2d, 0x59, 0x84, 0x4d, 0x32, 0xbd, 0xca, 0x91, 0x5c, 0x82, 0x03, 0xdd, 0x44,
+    0xb3, 0x3f, 0xbb, 0x7e, 0xdc, 0x19, 0x05, 0x1e, 0xa3, 0x7a, 0xbe, 0xdf, 0x28, 0xec, 0xd4, 0x72,
 ];
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -125,9 +119,7 @@ pub struct RemittanceContract;
 #[contractimpl]
 impl RemittanceContract {
     pub fn __constructor(env: Env, deployer: Address) {
-        env.storage()
-            .instance()
-            .set(&DataKey::Deployer, &deployer);
+        env.storage().instance().set(&DataKey::Deployer, &deployer);
 
         env.storage().instance().set(&DataKey::Counter, &0_u64);
 
@@ -176,11 +168,7 @@ impl RemittanceContract {
 
         Self::bump_instance(&env);
 
-        let current_counter: u64 = env
-            .storage()
-            .instance()
-            .get(&DataKey::Counter)
-            .unwrap_or(0);
+        let current_counter: u64 = env.storage().instance().get(&DataKey::Counter).unwrap_or(0);
 
         let id = current_counter
             .checked_add(1)
@@ -189,11 +177,7 @@ impl RemittanceContract {
         let token_address = Self::token_address(&env);
         let token_client = token::TokenClient::new(&env, &token_address);
 
-        token_client.transfer(
-            &sender,
-            &env.current_contract_address(),
-            &amount,
-        );
+        token_client.transfer(&sender, &env.current_contract_address(), &amount);
 
         let remittance = Remittance {
             id,
@@ -247,11 +231,7 @@ impl RemittanceContract {
         id
     }
 
-    pub fn claim_remittance(
-        env: Env,
-        remittance_id: u64,
-        receiver: Address,
-    ) -> Remittance {
+    pub fn claim_remittance(env: Env, remittance_id: u64, receiver: Address) -> Remittance {
         receiver.require_auth();
 
         Self::bump_instance(&env);
@@ -320,11 +300,7 @@ impl RemittanceContract {
         remittance
     }
 
-    pub fn refund_remittance(
-        env: Env,
-        remittance_id: u64,
-        sender: Address,
-    ) -> Remittance {
+    pub fn refund_remittance(env: Env, remittance_id: u64, sender: Address) -> Remittance {
         sender.require_auth();
 
         Self::bump_instance(&env);
@@ -348,11 +324,7 @@ impl RemittanceContract {
         let token_address = Self::token_address(&env);
         let token_client = token::TokenClient::new(&env, &token_address);
 
-        token_client.transfer(
-            &env.current_contract_address(),
-            &sender,
-            &remittance.amount,
-        );
+        token_client.transfer(&env.current_contract_address(), &sender, &remittance.amount);
 
         remittance.status = RemittanceStatus::Refunded;
         remittance.updated_at = now;
@@ -397,20 +369,12 @@ impl RemittanceContract {
         Self::read_remittance(&env, remittance_id)
     }
 
-    pub fn list_remittances(
-        env: Env,
-        start_id: u64,
-        limit: u32,
-    ) -> Vec<Remittance> {
+    pub fn list_remittances(env: Env, start_id: u64, limit: u32) -> Vec<Remittance> {
         if limit == 0 || limit > MAX_PAGE_SIZE {
             panic_with_error!(&env, RemittanceError::InvalidLimit);
         }
 
-        let counter: u64 = env
-            .storage()
-            .instance()
-            .get(&DataKey::Counter)
-            .unwrap_or(0);
+        let counter: u64 = env.storage().instance().get(&DataKey::Counter).unwrap_or(0);
 
         let mut results = Vec::new(&env);
         let mut id = if start_id == 0 { 1 } else { start_id };
@@ -418,9 +382,7 @@ impl RemittanceContract {
         while id <= counter && results.len() < limit {
             let key = DataKey::Remittance(id);
 
-            if let Some(remittance) =
-                env.storage().persistent().get::<DataKey, Remittance>(&key)
-            {
+            if let Some(remittance) = env.storage().persistent().get::<DataKey, Remittance>(&key) {
                 results.push_back(remittance);
             }
 
@@ -438,10 +400,7 @@ impl RemittanceContract {
     }
 
     pub fn get_counter(env: Env) -> u64 {
-        env.storage()
-            .instance()
-            .get(&DataKey::Counter)
-            .unwrap_or(0)
+        env.storage().instance().get(&DataKey::Counter).unwrap_or(0)
     }
 
     pub fn get_token(env: Env) -> Address {
@@ -449,10 +408,7 @@ impl RemittanceContract {
     }
 
     pub fn get_deployer(env: Env) -> Address {
-        env.storage()
-            .instance()
-            .get(&DataKey::Deployer)
-            .unwrap()
+        env.storage().instance().get(&DataKey::Deployer).unwrap()
     }
 
     fn empty_stats() -> RemittanceStats {
@@ -484,24 +440,19 @@ impl RemittanceContract {
     fn native_xlm_token(env: &Env) -> Address {
         let network_id = env.ledger().network_id();
 
-        let mainnet_id =
-            BytesN::from_array(env, &MAINNET_NETWORK_ID);
+        let mainnet_id = BytesN::from_array(env, &MAINNET_NETWORK_ID);
 
         if network_id == mainnet_id {
             return Address::from_str(env, MAINNET_XLM_SAC);
         }
 
-        let testnet_id =
-            BytesN::from_array(env, &TESTNET_NETWORK_ID);
+        let testnet_id = BytesN::from_array(env, &TESTNET_NETWORK_ID);
 
         if network_id == testnet_id {
             return Address::from_str(env, TESTNET_XLM_SAC);
         }
 
-        panic_with_error!(
-            env,
-            RemittanceError::UnsupportedNetwork
-        );
+        panic_with_error!(env, RemittanceError::UnsupportedNetwork);
     }
 
     fn stats(env: &Env) -> RemittanceStats {
@@ -518,9 +469,7 @@ impl RemittanceContract {
             .storage()
             .persistent()
             .get(&key)
-            .unwrap_or_else(|| {
-                panic_with_error!(env, RemittanceError::RemittanceNotFound)
-            });
+            .unwrap_or_else(|| panic_with_error!(env, RemittanceError::RemittanceNotFound));
 
         env.storage()
             .persistent()

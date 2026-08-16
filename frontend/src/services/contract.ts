@@ -53,12 +53,9 @@ function ensureContractReady(): void {
     throw new Error("Stellar SDK RPC components are unavailable.");
   }
 
-  if (
-    !CONTRACT_CONFIG.contractId ||
-    CONTRACT_CONFIG.contractId === "REPLACE_AFTER_DEPLOY"
-  ) {
+  if (!CONTRACT_CONFIG.contractId) {
     throw new Error(
-      "Contract is not deployed yet. Configure VITE_CONTRACT_ID after deployment."
+      "Mainnet contract configuration is missing."
     );
   }
 }

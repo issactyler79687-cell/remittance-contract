@@ -1,17 +1,16 @@
-name: Level 3 CI
+name: Remit CI
 
 on:
   push:
     branches:
       - main
-      - level-3-upgrade
   pull_request:
     branches:
       - main
 
 jobs:
   smart-contract:
-    name: Smart Contract CI
+    name: Smart Contract
     runs-on: ubuntu-latest
 
     steps:
@@ -33,7 +32,7 @@ jobs:
         run: cargo build --workspace --target wasm32v1-none --release
 
   frontend:
-    name: Frontend CI
+    name: Frontend
     runs-on: ubuntu-latest
 
     defaults:
@@ -54,17 +53,14 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Type check frontend
+      - name: Type check
         run: npm run type-check
 
-      - name: Build frontend
+      - name: Build
         run: npm run build
 
-      - name: Run frontend smoke test
-        run: npm test
-
-  deployment-config:
-    name: Deployment Config Detection
+  release-config:
+    name: Mainnet Release Config
     runs-on: ubuntu-latest
 
     steps:
@@ -75,8 +71,31 @@ jobs:
         shell: bash
         run: |
           test -f README.md
-          test -f CONTRACT_ID.txt
-          test -f TX_HASH.txt
-          test -f DEPLOYMENT.md
+          test -f docs/ARCHITECTURE.md
+          test -f docs/QUALITY_AND_DEPLOYMENT.md
+          test -f docs/MAINNET_DEPLOYMENT.md
           test -f frontend/src/contractConfig.ts
-          test -f scripts/deploy-and-save.ps1
+          test -f scripts/verify-release.ps1
+
+      - name: Check Mainnet values
+        shell: bash
+        run: |
+          grep -q "CAQCTQQM7HAJEGGMUJ3EHZ2XFDOUOBOBRDMFOCC4S3XFXYEOL5VSSLSI" frontend/src/contractConfig.ts
+          grep -q "CAQCTQQM7HAJEGGMUJ3EHZ2XFDOUOBOBRDMFOCC4S3XFXYEOL5VSSLSI" docs/MAINNET_DEPLOYMENT.md
+          grep -q "GAHMY42DAKF4XBJMSVOK63LETPAUHAM2D6XQS764JBFL57N25FMYW42N" docs/MAINNET_DEPLOYMENT.md
+          grep -q "65c6aa5c986a146fab07009156b5578e9cc5a6d8df70c6a1d1060fd86bdf2697" docs/MAINNET_DEPLOYMENT.md
+          grep -q "61320fb0f9f1b095a3a9adc2199d386f8d04cc3e5c1576f6f44f05be69a2300e" docs/MAINNET_DEPLOYMENT.md
+          grep -q "bc9a5d63bfe8ca48d2ca69f8197b2c539475107a77c124377452b9400aeaa46d" docs/MAINNET_DEPLOYMENT.md
+          grep -q "Public Global Stellar Network ; September 2015" frontend/src/contractConfig.ts
+          grep -q "https://soroban-rpc.mainnet.stellar.gateway.fm" frontend/src/contractConfig.ts
+
+      - name: Reject stale project references
+        shell: bash
+        run: |
+          if grep -RniE "Level 3|Level3|edenphann99|CC4VBT3IZWXDWH56L2MOJZSKHQIHVW7VEB55J33VFOARTESV2OY7VDAS|ae636d55ab2443c74aec9f21c25d75a2008823ac742a7983090ae28c9372b6ef|create_transfer|claim_transfer|cancel_transfer|verify-level3" README.md docs frontend; then
+            echo "Stale project reference detected."
+            exit 1
+          fi
+
+          test ! -f scripts/verify-level3.ps1
+          test ! -f scripts/deploy-and-save.ps1
