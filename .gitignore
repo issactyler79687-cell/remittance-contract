@@ -1,0 +1,39 @@
+target/
+node_modules/
+dist/
+.vite/
+.env
+.env.local
+.stellar/
+deploy-output.txt
+deploy-stdout.tmp
+deploy-stderr.tmp
+version-check.txt
+*.bak
+.DS_Store
+contracts/**/test_snapshots/
+frontend/node_modules/
+frontend/dist/
+frontend/.vite/
+server/node_modules/
+server/dist/
+frontend/.env
+frontend/.env.local
+
+frontend/.env
+frontend/.env.local
+
+# Stellar transaction/signing artifacts
+*.xdr
+*.log
+
+# Secrets
+.env
+.env.*
+!.env.example
+
+# Build/dependencies
+target/
+node_modules/
+frontend/node_modules/
+frontend/dist/
